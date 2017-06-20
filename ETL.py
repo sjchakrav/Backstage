@@ -72,38 +72,36 @@ def generate_url_and_retrieve_data(split):
 	return appended_data
 
 
-data = load_json_data("http://www.veterans.gc.ca/xml/jsonp/app.cfc?method=remoteGetAllCasualtyInfo&start=1&end=500&callback=?&language=en")
-df = normalize_data(data['casualties'])
-#establish connection object to hosted pg db
-engine = create_engine('postgresql://root:backstagetesting123456789@backstageinstance.ctjtojl7pj7i.us-west-2.rds.amazonaws.com:5432/prod')
-#build schema
-sql_command = open('/Users/schakravorty/Development/Backstage/schema.sql', 'r').read()
-build_schema(sql_command, engine)
-
-"""load data via psql terminal commands"""
-#psql --host=backstageinstance.ctjtojl7pj7i.us-west-2.rds.amazonaws.com --port=5432 --username=root --dbname=prod --password
-#\COPY canadian_war_memorial FROM '~/Development/Backstage/canadian_memorial.csv'  CSV HEADER
-#COPY 499
-
-#process via genderize's API
-
-#extract only the first word from each string for easy mapping
-df['first_names'] = df['forenames'].apply(lambda x: x.split(' ', 1)[0])
-#determine the distinct names
-unique_names = df['first_names'].unique()
-chunked_list = list(chunks(unique_names, 10))
-split = get_print_out()
-gender_data = generate_url_and_retrieve_data(split)
-
-"""join data with pd.merge on 'first_names'"""
-
-merged_data = pd.merge(df, gender_data, on='first_names', how='inner')
-merged_data['count'] = merged_data['count'].fillna(0.0).astype(int)
-
-write_to_csv(merged_data, 'canadian_memorial.csv')
-
 def main():
-	return None
+	data = load_json_data("http://www.veterans.gc.ca/xml/jsonp/app.cfc?method=remoteGetAllCasualtyInfo&start=1&end=500&callback=?&language=en")
+	df = normalize_data(data['casualties'])
+
+	#establish connection object to hosted pg db
+	engine = create_engine('postgresql://root:backstagetesting123456789@backstageinstance.ctjtojl7pj7i.us-west-2.rds.amazonaws.com:5432/prod')
+	#build schema
+	sql_command = open('/Users/schakravorty/Development/Backstage/schema.sql', 'r').read()
+	build_schema(sql_command, engine)
+
+	#process via genderize's API
+	#extract only the first word from each string for easy mapping
+	df['first_names'] = df['forenames'].apply(lambda x: x.split(' ', 1)[0])
+	#determine the distinct names
+	unique_names = df['first_names'].unique()
+	chunked_list = list(chunks(unique_names, 10))
+	split = get_print_out()
+	gender_data = generate_url_and_retrieve_data(split)
+
+	"""join data with pd.merge on 'first_names'"""
+
+	merged_data = pd.merge(df, gender_data, on='first_names', how='inner')
+	merged_data['count'] = merged_data['count'].fillna(0.0).astype(int)
+
+	write_to_csv(merged_data, 'canadian_memorial.csv')
+
+	"""load data via psql terminal commands"""
+	#psql --host=backstageinstance.ctjtojl7pj7i.us-west-2.rds.amazonaws.com --port=5432 --username=root --dbname=prod --password
+	#\COPY canadian_war_memorial FROM '~/Development/Backstage/canadian_memorial.csv'  CSV HEADER
+	#COPY 499
 
 if __name__ == "__main__":
 	main()

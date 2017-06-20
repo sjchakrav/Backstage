@@ -1,0 +1,5 @@
+requests==2.13.0
+SQLAlchemy==0.9.8
+pandas==0.19.2
+psycopg2==2.7.1
+numpy==1.13.0
